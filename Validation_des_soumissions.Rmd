@@ -1,0 +1,79 @@
+---
+title: "EDA & vérification"
+author: "C.R."
+date: "22/09/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(visdat)
+library(inspectdf)
+```
+
+## Read csvs
+
+
+```{r cars}
+qp <- read_csv("data/qp.csv")
+foncier <- read_csv("data/foncier_qp.csv") %>% mutate_if(is.character, as.factor)
+
+```
+
+## Exploration Plots
+
+les pièges
+```{r qp, echo=FALSE}
+vis_dat(qp)
+```
+
+
+```{r foncier, echo=FALSE}
+vis_dat(foncier)
+
+qplot(foncier %>% filter(type_local=="Appartement", valeur_fonciere<5.5e5,, valeur_fonciere>1000) %>% pull(valeur_fonciere), bins=100)
+
+
+qplot(foncier %>% filter(type_local=="Appartement", surface_reelle_bati>10, valeur_fonciere<5e5, valeur_fonciere>1000) %>% summarise(px_m2 = valeur_fonciere/surface_reelle_bati) %>% 
+  filter(px_m2<15e3) %>% pull(px_m2), bins=100)
+
+```
+
+# Statistiques
+
+## qp
+```{r}
+
+```
+
+## mutations foncières générales
+```{r}
+# prix median du m² des appartements
+foncier %>% filter(type_local=="Appartement", surface_reelle_bati>10, valeur_fonciere<5e5, valeur_fonciere>1000) %>% summarise(px_m2 = valeur_fonciere/surface_reelle_bati) %>% summary
+
+# evolution du prix median au m²
+(fglob <-foncier %>%
+  filter(type_local=="Appartement", surface_reelle_bati>10, valeur_fonciere<5e5, valeur_fonciere>1000) %>%
+  group_by(annee_mutation) %>%
+  summarise(px_m2 = valeur_fonciere/surface_reelle_bati) %>% 
+  filter(px_m2<15e3) %>% 
+  summarise(px_m2_median = median(px_m2)) %>% mutate(plus_value = 100*(px_m2_median - lag(px_m2_median))/px_m2_median))
+summary(fglob$plus_value)
+```
+
+## mutations foncières par type de bien
+```{r}
+# prix median du m² des appartements
+foncier %>% filter(type_local=="Appartement", surface_reelle_bati>10, valeur_fonciere<5e5, valeur_fonciere>1000) %>% summarise(px_m2 = valeur_fonciere/surface_reelle_bati) %>% summary
+
+# evolution du prix median au m²
+(fgroup <-foncier %>%
+  filter(surface_reelle_bati>10, valeur_fonciere<3e6, valeur_fonciere>1000) %>%
+  group_by(annee_mutation, type_local) %>%
+  summarise(px_m2 = valeur_fonciere/surface_reelle_bati) %>% 
+  filter(px_m2<15e3) %>% 
+  summarise(px_m2_median = median(px_m2)) %>% mutate(plus_value = 100*(px_m2_median - lag(px_m2_median))/px_m2_median))
+summary(fgroup$plus_value)
+```
+
